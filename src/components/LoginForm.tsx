@@ -3,19 +3,25 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 
 const ALLOWED_EMAILS = ['ramsarabia@gmail.com', 'claufer94@gmail.com']
 
 export function LoginForm() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isSignUp, setIsSignUp] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    if (!email || !password) {
+      setError('Email and password required')
+      return
+    }
 
     if (!ALLOWED_EMAILS.includes(email)) {
       setError('Access denied. Only authorized emails can log in.')
@@ -24,52 +30,40 @@ export function LoginForm() {
 
     setLoading(true)
 
-    // Get the correct redirect URL
-    let redirectUrl = window.location.origin
-    if (window.location.origin.includes('localhost')) {
-      redirectUrl = 'https://waco-move-dashboard.vercel.app'
-    }
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
-    })
-
-    if (error) {
-      setError(error.message)
+    if (isSignUp) {
+      // Sign up
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
+      })
+      if (error) {
+        setError(error.message)
+      } else {
+        setError('')
+        // Auto sign in after signup
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (signInError) {
+          setError(signInError.message)
+        }
+      }
     } else {
-      setSubmitted(true)
+      // Sign in
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+      if (error) {
+        setError(error.message)
+      }
     }
-    setLoading(false)
-  }
 
-  if (submitted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-slate-100 px-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-8 text-center">
-            <div className="flex justify-center mb-4">
-              <CheckCircle2 className="w-12 h-12 text-green-600" />
-            </div>
-            <h2 className="text-lg font-semibold text-slate-900 mb-2">Check your email</h2>
-            <p className="text-slate-600 mb-4">
-              We sent a login link to <strong>{email}</strong>
-            </p>
-            <p className="text-sm text-slate-500 mb-6">
-              Click the link in your email to log in to the move dashboard.
-            </p>
-            <button
-              onClick={() => setSubmitted(false)}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              ← Back to login
-            </button>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    setLoading(false)
   }
 
   return (
@@ -92,6 +86,17 @@ export function LoginForm() {
               />
             </div>
 
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-2">Password</label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                disabled={loading}
+              />
+            </div>
+
             {error && (
               <div className="flex gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -99,12 +104,23 @@ export function LoginForm() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={loading || !email}>
-              {loading ? 'Sending link...' : 'Send login link'}
+            <Button type="submit" className="w-full" disabled={loading || !email || !password}>
+              {loading ? 'Loading...' : isSignUp ? 'Create Account' : 'Sign In'}
             </Button>
 
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp)
+                setError('')
+              }}
+              className="w-full text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+            </button>
+
             <p className="text-xs text-slate-500 text-center">
-              We'll send you a link to log in — no password needed
+              {isSignUp ? 'Create a password-protected account' : 'Use email and password to log in'}
             </p>
           </form>
         </CardContent>
