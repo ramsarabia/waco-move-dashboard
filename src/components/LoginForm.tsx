@@ -23,10 +23,17 @@ export function LoginForm() {
     }
 
     setLoading(true)
+
+    // Get the correct redirect URL
+    let redirectUrl = window.location.origin
+    if (window.location.origin.includes('localhost')) {
+      redirectUrl = 'https://waco-move-dashboard.vercel.app'
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}`,
+        emailRedirectTo: redirectUrl,
       },
     })
 
