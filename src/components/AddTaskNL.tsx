@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { AlertCircle, Wand2 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 
 interface AddTaskNLProps {
   category: string
@@ -22,9 +23,13 @@ export function AddTaskNL({ category, onTaskCreated }: AddTaskNLProps) {
     setError('')
 
     try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token
       const response = await fetch('/api/parse-task', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ text: text.trim(), category }),
       })
 
